@@ -1,0 +1,57 @@
+/* Shared shell chrome for the app's floating, draggable panels (OptionsPanel,
+   FloatingMidiPanel) — composed into each panel's own module so panel-specific
+   sizing (max-height, z-index) stays local. Sharp-edged (no radius) as a
+   first step of the broader sharp-edges shift. */
+.panel {
+  position: absolute;
+  width: 320px;
+  box-sizing: border-box;
+  background: var(--block-bg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Dark mode: the ambient gradient washes out subtle shadows — stack a
+   stronger drop plus a tight contact shadow so the panel reads as clearly
+   lifted above the canvas. */
+[data-theme='dark'] .panel {
+  box-shadow:
+    0 9px 48px 8px rgba(0, 0, 0, 0.85),
+    0 4px 12px 2px rgba(0, 0, 0, 0.8);
+}
+
+.titlebar {
+  display: flex;
+  align-items: center;
+  padding: 0.4rem 0.6rem;
+  background: var(--panel-titlebar);
+  border-bottom: 1px solid var(--color-divider);
+  gap: 0.35rem;
+}
+
+/* Drag-handle region — only this area initiates drag so right-cluster
+   controls get their clicks intact. */
+.dragHandle {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  min-width: 0;
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0.75rem;
+  overflow-y: auto;
+}
