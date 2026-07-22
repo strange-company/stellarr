@@ -6,6 +6,7 @@ import { Input } from '../common/Input';
 import { InputGroup, InputGroupLabel } from '../common/InputGroup';
 import { Numeric } from '../common/Numeric';
 import { Tablist, Tab } from '../common/Tablist';
+import { clamp } from '../../utils/clamp';
 import styles from './MidiMonitor.module.css';
 
 type SenderMode = 'cc' | 'pc';
@@ -100,6 +101,57 @@ function Sender() {
   );
 }
 
+/** Shared "Ch" field (MIDI channel 1-16 display, 0-15 stored) used by both
+ * CC and PC senders. */
+function ChannelField({
+  channel,
+  onChange,
+}: {
+  channel: number;
+  onChange: (channel: number) => void;
+}) {
+  return (
+    <InputGroup>
+      <InputGroupLabel className={styles.prefix}>Ch</InputGroupLabel>
+      <Input
+        inGroup
+        mono
+        type="number"
+        min={1}
+        max={16}
+        value={channel + 1}
+        onChange={(e) => onChange(clamp((parseInt(e.target.value) || 1) - 1, 0, 15))}
+      />
+    </InputGroup>
+  );
+}
+
+/** Shared 0-127 clamped numeric field (CC#, Val, Prog) used by both senders. */
+function Midi7BitField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <InputGroup>
+      <InputGroupLabel className={styles.prefix}>{label}</InputGroupLabel>
+      <Input
+        inGroup
+        mono
+        type="number"
+        min={0}
+        max={127}
+        value={value}
+        onChange={(e) => onChange(clamp(parseInt(e.target.value) || 0, 0, 127))}
+      />
+    </InputGroup>
+  );
+}
+
 function CcSender() {
   const [channel, setChannel] = useState(0);
   const [cc, setCc] = useState(1);
@@ -109,46 +161,9 @@ function CcSender() {
 
   return (
     <div className={styles.senderFields}>
-      <InputGroup>
-        <InputGroupLabel className={styles.prefix}>CC#</InputGroupLabel>
-        <Input
-          inGroup
-          mono
-          type="number"
-          min={0}
-          max={127}
-          value={cc}
-          onChange={(e) => setCc(Math.max(0, Math.min(127, parseInt(e.target.value) || 0)))}
-        />
-      </InputGroup>
-
-      <InputGroup>
-        <InputGroupLabel className={styles.prefix}>Ch</InputGroupLabel>
-        <Input
-          inGroup
-          mono
-          type="number"
-          min={1}
-          max={16}
-          value={channel + 1}
-          onChange={(e) =>
-            setChannel(Math.max(0, Math.min(15, (parseInt(e.target.value) || 1) - 1)))
-          }
-        />
-      </InputGroup>
-
-      <InputGroup>
-        <InputGroupLabel className={styles.prefix}>Val</InputGroupLabel>
-        <Input
-          inGroup
-          mono
-          type="number"
-          min={0}
-          max={127}
-          value={value}
-          onChange={(e) => setValue(Math.max(0, Math.min(127, parseInt(e.target.value) || 0)))}
-        />
-      </InputGroup>
+      <Midi7BitField label="CC#" value={cc} onChange={setCc} />
+      <ChannelField channel={channel} onChange={setChannel} />
+      <Midi7BitField label="Val" value={value} onChange={setValue} />
 
       <Button onClick={send} className={styles.sendBtn}>
         Send
@@ -165,35 +180,8 @@ function PcSender() {
 
   return (
     <div className={styles.senderFields}>
-      <InputGroup>
-        <InputGroupLabel className={styles.prefix}>Prog</InputGroupLabel>
-        <Input
-          inGroup
-          mono
-          type="number"
-          min={0}
-          max={127}
-          value={program}
-          onChange={(e) =>
-            setProgram(Math.max(0, Math.min(127, parseInt(e.target.value) || 0)))
-          }
-        />
-      </InputGroup>
-
-      <InputGroup>
-        <InputGroupLabel className={styles.prefix}>Ch</InputGroupLabel>
-        <Input
-          inGroup
-          mono
-          type="number"
-          min={1}
-          max={16}
-          value={channel + 1}
-          onChange={(e) =>
-            setChannel(Math.max(0, Math.min(15, (parseInt(e.target.value) || 1) - 1)))
-          }
-        />
-      </InputGroup>
+      <Midi7BitField label="Prog" value={program} onChange={setProgram} />
+      <ChannelField channel={channel} onChange={setChannel} />
 
       <Button onClick={send} className={styles.sendBtn}>
         Send

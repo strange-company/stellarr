@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { line as d3Line } from 'd3-shape';
 import type { MidiCurve } from '../../../store';
 import { Numeric } from '../Numeric';
+import { clamp } from '../../../utils/clamp';
 import styles from './MappingPreview.module.css';
 
 interface Props {
@@ -118,7 +119,7 @@ export function MappingPreview({
       return;
     }
     const cc = Math.round(((xInVb - PAD_LEFT) / PLOT_W) * 127);
-    setHoverCc(Math.max(0, Math.min(127, cc)));
+    setHoverCc(clamp(cc, 0, 127));
   };
 
   const handleMouseLeave = () => setHoverCc(null);

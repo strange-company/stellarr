@@ -1,20 +1,13 @@
 .divider {
-  height: 1px;
-  background: var(--color-border);
+  composes: divider from './sectionHeader.module.css';
 }
 
 .container {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  composes: container from './sectionHeader.module.css';
 }
 
 .sectionTitle {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--color-primary);
-  letter-spacing: var(--letter-spacing-label);
-  text-transform: uppercase;
+  composes: sectionTitle from './sectionHeader.module.css';
 }
 
 .grid {

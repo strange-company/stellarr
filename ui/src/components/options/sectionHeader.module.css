@@ -1,0 +1,22 @@
+/* Shared Options-panel section header: divider rule, section container, and
+ * orchid section title. Composed into ParametersSection / StatesSection (and
+ * any future Options section) so the shape has one source of truth. */
+
+.divider {
+  height: 1px;
+  background: var(--color-border);
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  letter-spacing: var(--letter-spacing-label);
+  text-transform: uppercase;
+}

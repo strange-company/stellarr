@@ -151,7 +151,7 @@ export function Grid() {
     [blocks],
   );
 
-  // -- Connection drag handlers (unchanged) -----------------------------------
+  // -- Connection drag handlers ------------------------------------------------
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {

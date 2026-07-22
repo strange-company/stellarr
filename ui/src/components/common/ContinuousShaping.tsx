@@ -5,6 +5,7 @@ import { InputGroup, InputGroupLabel } from './InputGroup';
 import { Select } from './Select';
 import type { TargetMeta } from './shaping/targetMeta';
 import type { MidiCurve } from '../../store';
+import { clamp } from '../../utils/clamp';
 import styles from './ContinuousShaping.module.css';
 
 const CURVE_OPTIONS = [
@@ -27,8 +28,6 @@ interface Props {
   state: ShapingState;
   onChange: (next: ShapingState) => void;
 }
-
-const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 interface ParamInputProps {
   meta: TargetMeta;

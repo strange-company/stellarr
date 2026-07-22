@@ -2,11 +2,12 @@ import { useState, useRef } from 'react';
 import { useStore } from '../../store';
 import { LoudnessWindowPopup } from '../options/LoudnessWindowPopup';
 import { Numeric } from '../common/Numeric';
+import { clamp } from '../../utils/clamp';
 import styles from './Footer.module.css';
 
 function CpuMeter() {
   const cpu = useStore((s) => s.cpuPercent);
-  const clamped = Math.min(100, Math.max(0, cpu));
+  const clamped = clamp(cpu, 0, 100);
 
   // CPU uses primary for healthy, secondary (amber) for hot, danger for overload
   const hot = clamped >= 70;
@@ -68,7 +69,7 @@ function LufsMeter({
   };
 
   // Map LUFS [-60..0] to width [0..100]
-  const pct = Math.max(0, Math.min(100, ((lufs + 60) / 60) * 100));
+  const pct = clamp(((lufs + 60) / 60) * 100, 0, 100);
 
   // Healthy orchid fill; amber hot zone above -6 LUFS; danger near clip
   const hotThreshold = 90; // ~-6 LUFS
