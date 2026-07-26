@@ -30,7 +30,7 @@
 
 .chipDelete:hover {
   background: var(--color-danger);
-  color: #ffffff;
+  color: var(--color-on-primary);
 }
 
 .chipLocked {
@@ -57,7 +57,7 @@
 
 .chipAdd:hover {
   background: var(--color-secondary);
-  color: #ffffff;
+  color: var(--color-on-primary);
 }
 
 /* Hover preview line — 1px dashed through the centre of the target row/col.

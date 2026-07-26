@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ContinuousShaping } from '../ContinuousShaping';
 import { TARGET_META } from '../shaping/targetMeta';
+import inputStyles from '../Input.module.css';
 
 describe('ContinuousShaping', () => {
   const baseState = {
@@ -44,6 +45,21 @@ describe('ContinuousShaping', () => {
     fireEvent.change(ccMinInput, { target: { value: '20' } });
     fireEvent.blur(ccMinInput);
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ ccMin: 20 }));
+  });
+
+  it('renders every numeric input (CC min/max, param min/max) in mono for tabular alignment', () => {
+    render(
+      <ContinuousShaping
+        meta={TARGET_META.blockMix}
+        state={{ ...baseState, paramMin: 0.3, paramMax: 0.8 }}
+        onChange={vi.fn()}
+      />,
+    );
+    const numberInputs = screen.getAllByRole('spinbutton');
+    expect(numberInputs.length).toBeGreaterThan(0);
+    for (const input of numberInputs) {
+      expect(input.className).toContain(inputStyles.mono);
+    }
   });
 
   it('renders the curve trigger with the current value', () => {
