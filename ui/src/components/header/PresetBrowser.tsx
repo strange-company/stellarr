@@ -21,6 +21,7 @@ import { useRenameDeleteDialogs } from './useRenameDeleteDialogs';
 import { RenameDeleteDialogs } from './RenameDeleteDialogs';
 import { MidiAssignDialog } from '../common/MidiAssignDialog';
 import { formatMidiLabel } from '../common/constants';
+import { Numeric } from '../common/Numeric';
 import styles from './PresetBrowser.module.css';
 
 // -- Shared trigger content for preset/scene dropdowns ------------------------
@@ -326,7 +327,11 @@ function PresetDropdown({
                     }
                   >
                     {file.replace('.stellarr', '')}
-                    {presetMidi && <span className={styles.midiTag}>PC:{i}</span>}
+                    {presetMidi && (
+                      <Numeric as="span" className={styles.midiTag}>
+                        PC:{i}
+                      </Numeric>
+                    )}
                   </MenuItem>
                   <DropdownMenu.Sub>
                     <DropdownMenu.SubTrigger className={styles.subTrigger}>
@@ -446,9 +451,9 @@ function SceneDropdown({
                     />
                   )}
                   {sceneMidi && (
-                    <span className={styles.midiTag}>
+                    <Numeric as="span" className={styles.midiTag}>
                       {formatMidiLabel(sceneMidi)} val:{i}
-                    </span>
+                    </Numeric>
                   )}
                 </MenuItem>
                 <DropdownMenu.Sub>

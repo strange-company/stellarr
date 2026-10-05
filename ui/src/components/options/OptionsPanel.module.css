@@ -191,7 +191,7 @@
 .toneButtonPlaying {
   background: var(--color-primary);
   border-color: var(--color-primary);
-  color: #ffffff;
+  color: var(--color-on-primary);
 }
 
 .toneButtonPlaying:hover {

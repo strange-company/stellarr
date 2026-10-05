@@ -5,6 +5,7 @@ import { Input } from '../common/Input';
 import { InputGroup, InputGroupLabel } from '../common/InputGroup';
 import { MidiAssignDialog } from '../common/MidiAssignDialog';
 import { MidiBadge } from '../common/MidiBadge';
+import { Numeric } from '../common/Numeric';
 import { Tablist, Tab } from '../common/Tablist';
 import { Tag } from '../common/Tag';
 import styles from './TunerPanel.module.css';
@@ -103,7 +104,7 @@ export function TunerPanel() {
               onClick={() => requestSetReferencePitch(hz)}
               className={styles.presetTag}
             >
-              {hz}
+              <Numeric>{hz}</Numeric>
             </Tag>
           ))}
         </div>

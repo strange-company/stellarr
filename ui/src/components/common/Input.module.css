@@ -2,7 +2,6 @@
   height: var(--input-height);
   padding: 0 var(--input-padding-x);
   font-size: var(--text-base);
-  font-variant-numeric: tabular-nums;
   color: var(--color-text);
   background: var(--color-cell);
   border: 1px solid var(--color-border);
@@ -40,5 +39,6 @@
    match <Numeric> readouts. Text inputs do not get this. */
 .mono {
   font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
 }
 
