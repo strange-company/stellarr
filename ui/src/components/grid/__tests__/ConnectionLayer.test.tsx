@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, fireEvent, act } from '@testing-library/react';
 import { useStore } from '../../../store';
+import { useUiPrefsStore } from '../../../store/uiPrefs';
 import type { GridBlock, Connection } from '../../../store';
 import { ConnectionLayer } from '../ConnectionLayer';
 import { colors } from '../../common/colors';
@@ -26,10 +27,10 @@ function resetStore() {
       blocks,
       connections,
       grid: { columns: 4, rows: 1 },
-      cellZoom: 'M',
       selectedBlockId: null,
       draggingConnection: null,
     });
+    useUiPrefsStore.setState({ cellZoom: 'M' });
   });
 }
 
