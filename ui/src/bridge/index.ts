@@ -235,10 +235,15 @@ export function requestDeleteScene(index: number): void {
 
 // -- MIDI mapping commands ----------------------------------------------------
 
-export interface AddMidiMappingArgs {
-  channel: number;
-  cc: number;
-  target: string;
+// MIDI shaping defaults — MUST match the engine decode side (engine/bridge /
+// MidiMapper). Fields equal to these are omitted from the payload to keep it
+// minimal; the engine applies the same default when a field is absent.
+const MIDI_CC_MIN_DEFAULT = 0;
+const MIDI_CC_MAX_DEFAULT = 127;
+const MIDI_THRESHOLD_DEFAULT = 64;
+const MIDI_CURVE_DEFAULT: MidiCurve = 'linear';
+
+export interface MidiShapingArgs {
   blockId?: string;
   targetIndex?: number;
   ccMin?: number;
@@ -249,20 +254,23 @@ export interface AddMidiMappingArgs {
   threshold?: number;
 }
 
-export function requestAddMidiMapping(args: AddMidiMappingArgs): void {
-  const payload: Record<string, unknown> = {
-    channel: args.channel,
-    cc: args.cc,
-    target: args.target,
-    blockId: args.blockId ?? '',
-  };
+export interface AddMidiMappingArgs extends MidiShapingArgs {
+  channel: number;
+  cc: number;
+  target: string;
+}
+
+// Applies the seven optional MIDI-shaping fields to `payload`, omitting any
+// that equal the engine's default so the JSON sent to C++ stays minimal.
+// Shared by requestAddMidiMapping and requestStartMidiLearn.
+function appendMidiShapingFields(payload: Record<string, unknown>, args: MidiShapingArgs): void {
   if (args.targetIndex !== undefined && args.targetIndex >= 0) {
     payload.targetIndex = args.targetIndex;
   }
-  if (args.ccMin !== undefined && args.ccMin !== 0) {
+  if (args.ccMin !== undefined && args.ccMin !== MIDI_CC_MIN_DEFAULT) {
     payload.ccMin = args.ccMin;
   }
-  if (args.ccMax !== undefined && args.ccMax !== 127) {
+  if (args.ccMax !== undefined && args.ccMax !== MIDI_CC_MAX_DEFAULT) {
     payload.ccMax = args.ccMax;
   }
   if (args.paramMin !== undefined && Number.isFinite(args.paramMin)) {
@@ -271,12 +279,22 @@ export function requestAddMidiMapping(args: AddMidiMappingArgs): void {
   if (args.paramMax !== undefined && Number.isFinite(args.paramMax)) {
     payload.paramMax = args.paramMax;
   }
-  if (args.curve !== undefined && args.curve !== 'linear') {
+  if (args.curve !== undefined && args.curve !== MIDI_CURVE_DEFAULT) {
     payload.curve = args.curve;
   }
-  if (args.threshold !== undefined && args.threshold !== 64) {
+  if (args.threshold !== undefined && args.threshold !== MIDI_THRESHOLD_DEFAULT) {
     payload.threshold = args.threshold;
   }
+}
+
+export function requestAddMidiMapping(args: AddMidiMappingArgs): void {
+  const payload: Record<string, unknown> = {
+    channel: args.channel,
+    cc: args.cc,
+    target: args.target,
+    blockId: args.blockId ?? '',
+  };
+  appendMidiShapingFields(payload, args);
   sendEvent(EventNames.MidiAddMapping, JSON.stringify(payload));
 }
 
@@ -292,44 +310,14 @@ export function requestGetMidiMappings(): void {
   sendEvent(EventNames.MidiGetMappings, '');
 }
 
-export interface StartMidiLearnArgs {
-  target: string;
-  blockId?: string;
-  targetIndex?: number;
-  ccMin?: number;
-  ccMax?: number;
-  paramMin?: number;
-  paramMax?: number;
-  curve?: MidiCurve;
-  threshold?: number;
-}
+export type StartMidiLearnArgs = Omit<AddMidiMappingArgs, 'channel' | 'cc'>;
 
 export function requestStartMidiLearn(args: StartMidiLearnArgs): void {
   const payload: Record<string, unknown> = {
     target: args.target,
     blockId: args.blockId ?? '',
   };
-  if (args.targetIndex !== undefined && args.targetIndex >= 0) {
-    payload.targetIndex = args.targetIndex;
-  }
-  if (args.ccMin !== undefined && args.ccMin !== 0) {
-    payload.ccMin = args.ccMin;
-  }
-  if (args.ccMax !== undefined && args.ccMax !== 127) {
-    payload.ccMax = args.ccMax;
-  }
-  if (args.paramMin !== undefined && Number.isFinite(args.paramMin)) {
-    payload.paramMin = args.paramMin;
-  }
-  if (args.paramMax !== undefined && Number.isFinite(args.paramMax)) {
-    payload.paramMax = args.paramMax;
-  }
-  if (args.curve !== undefined && args.curve !== 'linear') {
-    payload.curve = args.curve;
-  }
-  if (args.threshold !== undefined && args.threshold !== 64) {
-    payload.threshold = args.threshold;
-  }
+  appendMidiShapingFields(payload, args);
   sendEvent(EventNames.MidiStartLearn, JSON.stringify(payload));
 }
 
