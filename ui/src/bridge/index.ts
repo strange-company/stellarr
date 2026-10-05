@@ -11,20 +11,11 @@ import type {
   MidiMonitorEvent,
 } from '../store';
 import { EventNames, type InboundEventName, type OutboundEventName } from './eventNames';
+import type { UpdateStatus } from './updateTypes';
 
-export type UpdateStatus =
-  | 'idle' | 'checking' | 'available' | 'no-update'
-  | 'downloading' | 'ready' | 'error';
-
-export interface UpdateStatePayload {
-  status: UpdateStatus;
-  latestVersion: string;
-  releasedAt: string;
-  sizeBytes: number;
-  releaseNotesUrl: string;
-  downloadProgress: number;
-  error: string;
-}
+// Re-export so the public surface via '../bridge' is unchanged for existing
+// consumers — the types are now defined in the leaf module ./updateTypes.
+export type { UpdateStatus, UpdateStatePayload } from './updateTypes';
 
 declare global {
   interface Window {

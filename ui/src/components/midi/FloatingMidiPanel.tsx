@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useDrag } from '@use-gesture/react';
 import { IoCloseSharp } from 'react-icons/io5';
 import { useStore } from '../../store';
+import { useUiPrefsStore } from '../../store/uiPrefs';
 import { IconButton } from '../common/IconButton';
 import { MidiMonitorContent } from './MidiMonitor';
 import styles from './FloatingMidiPanel.module.css';
@@ -11,8 +12,8 @@ const PANEL_EDGE_GUTTER = 16;
 export function FloatingMidiPanel() {
   const open = useStore((s) => s.midiPanelOpen);
   const setOpen = useStore((s) => s.setMidiPanelOpen);
-  const storedPos = useStore((s) => s.midiPanelPosition);
-  const setPos = useStore((s) => s.setMidiPanelPosition);
+  const storedPos = useUiPrefsStore((s) => s.midiPanelPosition);
+  const setPos = useUiPrefsStore((s) => s.setMidiPanelPosition);
 
   const panelRef = useRef<HTMLDivElement | null>(null);
 
@@ -70,7 +71,7 @@ export function FloatingMidiPanel() {
     },
     {
       from: () => {
-        const pos = useStore.getState().midiPanelPosition;
+        const pos = useUiPrefsStore.getState().midiPanelPosition;
         if (pos) return [pos.x, pos.y];
         // Default top-left so it doesn't collide with the right-anchored
         // OptionsPanel default. Stored position wins once the user drags.

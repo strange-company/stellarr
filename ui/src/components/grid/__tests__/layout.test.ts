@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useStore } from '../../../store';
+import { useUiPrefsStore } from '../../../store/uiPrefs';
 import { useGridLayout, ZOOM_PRESETS } from '../layout';
 
 describe('useGridLayout', () => {
   beforeEach(() => {
-    useStore.getState().setCellZoom('M');
+    useUiPrefsStore.getState().setCellZoom('M');
   });
 
   it('returns the M preset by default', () => {
@@ -16,7 +16,7 @@ describe('useGridLayout', () => {
   });
 
   it('reflects the current zoom level', () => {
-    useStore.getState().setCellZoom('L');
+    useUiPrefsStore.getState().setCellZoom('L');
     const { result } = renderHook(() => useGridLayout());
     expect(result.current.cellSize).toBe(ZOOM_PRESETS.L.cellSize);
     expect(result.current.gap).toBe(ZOOM_PRESETS.L.gap);

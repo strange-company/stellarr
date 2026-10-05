@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useStore } from '../index';
 
+// Panel position (persisted) moved to store/__tests__/uiPrefs.test.ts along
+// with useUiPrefsStore. Open/closed state stays here — it's ephemeral
+// session UI on the main store, not a saved preference.
 describe('midi panel slice', () => {
   beforeEach(() => {
-    localStorage.removeItem('stellarr.midiPanel.position');
     useStore.getState().setMidiPanelOpen(false);
-    useStore.setState({ midiPanelPosition: null });
   });
 
   it('defaults to closed', () => {
@@ -27,17 +28,5 @@ describe('midi panel slice', () => {
   it('open/close NOT persisted to localStorage', () => {
     useStore.getState().setMidiPanelOpen(true);
     expect(localStorage.getItem('stellarr.midiPanel.open')).toBeNull();
-  });
-
-  it('default panel position is null (use default placement)', () => {
-    expect(useStore.getState().midiPanelPosition).toBeNull();
-  });
-
-  it('setMidiPanelPosition stores + persists', () => {
-    useStore.getState().setMidiPanelPosition({ x: 120, y: 50 });
-    expect(useStore.getState().midiPanelPosition).toEqual({ x: 120, y: 50 });
-    expect(localStorage.getItem('stellarr.midiPanel.position')).toBe(
-      JSON.stringify({ x: 120, y: 50 }),
-    );
   });
 });

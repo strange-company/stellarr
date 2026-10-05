@@ -1,4 +1,4 @@
-import { useStore } from '../../store';
+import { useUiPrefsStore } from '../../store/uiPrefs';
 
 export const ZOOM_PRESETS = {
   S: { cellSize: 72, gap: 16 },
@@ -39,7 +39,7 @@ export interface GridLayout {
 }
 
 export function useGridLayout(): GridLayout {
-  const zoom = useStore((s) => s.cellZoom);
+  const zoom = useUiPrefsStore((s) => s.cellZoom);
   const { cellSize, gap } = ZOOM_PRESETS[zoom];
   const step = cellSize + gap;
   // Plain object literal; closure functions recreated per render. Acceptable
