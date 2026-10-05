@@ -61,6 +61,14 @@ function orthogonalPath(
   ].join(' ');
 }
 
+// A connection is uniquely identified by its (source, dest) pair — the
+// engine's AudioProcessorGraph rejects re-adding an already-connected pair,
+// so this is safe to use as a stable render/state key (no parallel-edge
+// duplicates to disambiguate).
+function connectionKey(sourceId: string, destId: string): string {
+  return `${sourceId}->${destId}`;
+}
+
 export function ConnectionLayer({ onConnectionClick }: Props) {
   const layout = useGridLayout();
   const blocks = useStore((s) => s.blocks);
@@ -69,28 +77,41 @@ export function ConnectionLayer({ onConnectionClick }: Props) {
   const dragging = useStore((s) => s.draggingConnection);
 
   const selectedBlockId = useStore((s) => s.selectedBlockId);
-  const [hoveredConn, setHoveredConn] = useState<number | null>(null);
+  const [hoveredConn, setHoveredConn] = useState<string | null>(null);
 
-  // Global "complete circuit" set — connections that sit on at least one
-  // Input → … → Output path. Independent of block selection. A connection is
-  // complete when its source is reachable from some input block AND its
-  // destination can reach some output block (mute-bypass blocks break paths).
-  const completeConnections = useMemo(() => {
-    const complete = new Set<number>();
-    if (connections.length === 0) return complete;
+  // Single memoised block-lookup map — consumed by every memo/render path
+  // below instead of each one rebuilding its own `id -> block` Map.
+  const blockMap = useMemo(() => new Map(blocks.map((b) => [b.id, b])), [blocks]);
 
-    const bMap = new Map(blocks.map((b) => [b.id, b]));
+  // Shared downstream/upstream adjacency + isMuted() lookup rebuilt once here
+  // and consumed by both completeConnections and liveConnections below. Those
+  // two memos run genuinely different algorithms (global reachability vs.
+  // selection-rooted DFS with cycle-safe memoisation) — only this common
+  // setup is de-duplicated; each memo's traversal logic and mute semantics
+  // are preserved verbatim.
+  const connectionAdjacency = useMemo(() => {
     const downstream = new Map<string, string[]>();
     const upstream = new Map<string, string[]>();
     for (const c of connections) {
       downstream.set(c.sourceId, [...(downstream.get(c.sourceId) ?? []), c.destId]);
       upstream.set(c.destId, [...(upstream.get(c.destId) ?? []), c.sourceId]);
     }
-
     const isMuted = (id: string) => {
-      const b = bMap.get(id);
+      const b = blockMap.get(id);
       return b ? breaksSignal(b) : false;
     };
+    return { downstream, upstream, isMuted };
+  }, [connections, blockMap]);
+
+  // Global "complete circuit" set — connections that sit on at least one
+  // Input → … → Output path. Independent of block selection. A connection is
+  // complete when its source is reachable from some input block AND its
+  // destination can reach some output block (mute-bypass blocks break paths).
+  const completeConnections = useMemo(() => {
+    const complete = new Set<string>();
+    if (connections.length === 0) return complete;
+
+    const { downstream, upstream, isMuted } = connectionAdjacency;
 
     // BFS/DFS from the seeds along the given adjacency, EXCLUDING muted nodes
     // entirely — a muted block breaks the signal chain, so neither it nor
@@ -116,35 +137,21 @@ export function ConnectionLayer({ onConnectionClick }: Props) {
     const reachableFromInput = floodFrom(inputs, downstream);
     const canReachOutput = floodFrom(outputs, upstream);
 
-    connections.forEach((c, i) => {
+    connections.forEach((c) => {
       if (reachableFromInput.has(c.sourceId) && canReachOutput.has(c.destId)) {
-        complete.add(i);
+        complete.add(connectionKey(c.sourceId, c.destId));
       }
     });
     return complete;
-  }, [blocks, connections]);
+  }, [blocks, connections, connectionAdjacency]);
 
   // Find all connections on live routes (input→output) through the selected block.
   // Memoised so the DFS only re-runs when blocks, connections, or selection change.
   const liveConnections = useMemo(() => {
-    const live = new Set<number>();
+    const live = new Set<string>();
     if (!selectedBlockId) return live;
 
-    const bMap = new Map(blocks.map((b) => [b.id, b]));
-    const downstream = new Map<string, string[]>();
-    const upstream = new Map<string, string[]>();
-    for (const c of connections) {
-      downstream.set(c.sourceId, [...(downstream.get(c.sourceId) ?? []), c.destId]);
-      upstream.set(c.destId, [...(upstream.get(c.destId) ?? []), c.sourceId]);
-    }
-
-    // Bypass modes that fully cut the dry path (`mute`/`muteIn`/`muteOut`)
-    // are treated as dead ends; `muteFxIn`/`muteFxOut` keep the dry signal
-    // flowing and stay walkable.
-    const isMuted = (id: string) => {
-      const b = bMap.get(id);
-      return b ? breaksSignal(b) : false;
-    };
+    const { downstream, upstream, isMuted } = connectionAdjacency;
 
     // Memoised DFS: walk a direction collecting blocks that reach a target type.
     // Uses `memo` to cache results so diamond/convergent paths all get counted.
@@ -162,7 +169,7 @@ export function ConnectionLayer({ onConnectionClick }: Props) {
         if (path.has(id)) return false;
         path.add(id);
 
-        const blk = bMap.get(id);
+        const blk = blockMap.get(id);
         if (!blk) {
           memo.set(id, false);
           path.delete(id);
@@ -200,14 +207,15 @@ export function ConnectionLayer({ onConnectionClick }: Props) {
     const upstreamLive = walkReachable(selectedBlockId, upstream, 'input');
 
     const allLive = new Set([...downstreamLive, ...upstreamLive]);
-    connections.forEach((conn, i) => {
-      if (allLive.has(conn.sourceId) && allLive.has(conn.destId)) live.add(i);
+    connections.forEach((conn) => {
+      if (allLive.has(conn.sourceId) && allLive.has(conn.destId)) {
+        live.add(connectionKey(conn.sourceId, conn.destId));
+      }
     });
     return live;
-  }, [blocks, connections, selectedBlockId]);
+  }, [blocks, connections, selectedBlockId, connectionAdjacency, blockMap]);
 
   const hasSelection = selectedBlockId !== null;
-  const blockMap = useMemo(() => new Map(blocks.map((b) => [b.id, b])), [blocks]);
 
   // Group connections by source block (output side) and dest block (input side)
   // to determine count and sorted index for Y-position spacing.
@@ -221,10 +229,9 @@ export function ConnectionLayer({ onConnectionClick }: Props) {
       { sourceId: string; sourceRow: number; sourceCol: number; connIdx: number }[]
     >();
 
-    const bMap = new Map(blocks.map((b) => [b.id, b]));
     connections.forEach((conn, i) => {
-      const src = bMap.get(conn.sourceId);
-      const dst = bMap.get(conn.destId);
+      const src = blockMap.get(conn.sourceId);
+      const dst = blockMap.get(conn.destId);
       if (!src || !dst) return;
 
       const outGroup = outGroups.get(conn.sourceId) ?? [];
@@ -242,7 +249,7 @@ export function ConnectionLayer({ onConnectionClick }: Props) {
       group.sort((a, b) => a.sourceRow - b.sourceRow || a.sourceCol - b.sourceCol);
 
     return { outputGroups: outGroups, inputGroups: inGroups };
-  }, [connections, blocks]);
+  }, [connections, blockMap]);
 
   const gw = layout.gridWidth(grid.columns);
   const gh = layout.gridHeight(grid.rows);
@@ -264,8 +271,9 @@ export function ConnectionLayer({ onConnectionClick }: Props) {
         const x2 = layout.inputPortX(dst.col);
         const y2 = layout.connectionY(dst.row, inGroup.length, inIdx);
 
-        const isSelectedLive = liveConnections.has(i);
-        const isComplete = completeConnections.has(i);
+        const connKey = connectionKey(conn.sourceId, conn.destId);
+        const isSelectedLive = liveConnections.has(connKey);
+        const isComplete = completeConnections.has(connKey);
 
         // Stroke matrix:
         //   selected-live + complete        -> amber 100%
@@ -287,7 +295,7 @@ export function ConnectionLayer({ onConnectionClick }: Props) {
         }
 
         const strokeDasharray = isComplete ? undefined : '6 4';
-        const isHovered = hoveredConn === i;
+        const isHovered = hoveredConn === connKey;
 
         // Hover signals the destructive disconnect action — swap to danger
         // colour so it reads as "click to remove" rather than just thicker.
@@ -296,7 +304,7 @@ export function ConnectionLayer({ onConnectionClick }: Props) {
         const d = orthogonalPath(x1, y1, x2, y2, layout.cellSize, layout.gap);
 
         return (
-          <g key={i}>
+          <g key={connKey}>
             {/* Invisible wide hit area for clicking */}
             <path
               d={d}
@@ -304,8 +312,8 @@ export function ConnectionLayer({ onConnectionClick }: Props) {
               strokeWidth={12}
               fill="none"
               style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
-              onMouseEnter={() => setHoveredConn(i)}
-              onMouseLeave={() => setHoveredConn((prev) => (prev === i ? null : prev))}
+              onMouseEnter={() => setHoveredConn(connKey)}
+              onMouseLeave={() => setHoveredConn((prev) => (prev === connKey ? null : prev))}
               onClick={(e) => {
                 e.stopPropagation();
                 onConnectionClick?.(e, conn.sourceId, conn.destId);

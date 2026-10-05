@@ -1,3 +1,5 @@
+import { clamp } from '../../../utils/clamp';
+
 export type TargetKind = 'continuous' | 'binary' | 'none';
 
 export interface TargetMeta {
@@ -39,12 +41,12 @@ export const TARGET_META: Record<string, TargetMeta> = {
     paramInputStep: 0.5,
     paramSuffix: '%',
     paramToDisplay: (v) => v * 100,
-    paramFromDisplay: (d) => Math.max(0, Math.min(1, d / 100)),
+    paramFromDisplay: (d) => clamp(d / 100, 0, 1),
     paramLabel: 'Mix',
     paramFormat: (v) => `${Math.round(v * 100)}%`,
     paramParse: (s) => {
       const n = parseNumber(s);
-      return n == null ? null : Math.max(0, Math.min(1, n / 100));
+      return n == null ? null : clamp(n / 100, 0, 1);
     },
   },
   blockBalance: {
@@ -55,12 +57,12 @@ export const TARGET_META: Record<string, TargetMeta> = {
     paramInputStep: 1,
     paramSuffix: undefined,
     paramToDisplay: (v) => v * 100,
-    paramFromDisplay: (d) => Math.max(-1, Math.min(1, d / 100)),
+    paramFromDisplay: (d) => clamp(d / 100, -1, 1),
     paramLabel: 'Balance',
     paramFormat: (v) => `${Math.round(v * 100)}`,
     paramParse: (s) => {
       const n = parseNumber(s);
-      return n == null ? null : Math.max(-1, Math.min(1, n / 100));
+      return n == null ? null : clamp(n / 100, -1, 1);
     },
   },
   blockLevel: {
@@ -71,12 +73,12 @@ export const TARGET_META: Record<string, TargetMeta> = {
     paramInputStep: 0.5,
     paramSuffix: 'dB',
     paramToDisplay: (v) => v,
-    paramFromDisplay: (d) => Math.max(-60, Math.min(12, d)),
+    paramFromDisplay: (d) => clamp(d, -60, 12),
     paramLabel: 'Level',
     paramFormat: (v) => `${v.toFixed(1)} dB`,
     paramParse: (s) => {
       const n = parseNumber(s);
-      return n == null ? null : Math.max(-60, Math.min(12, n));
+      return n == null ? null : clamp(n, -60, 12);
     },
   },
   sceneSwitch:  { kind: 'none' },

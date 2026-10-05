@@ -1,5 +1,6 @@
 import { Numeric } from '../common/Numeric';
 import { useStore } from '../../store';
+import { clamp } from '../../utils/clamp';
 import styles from './LoudnessHistory.module.css';
 
 interface Props {
@@ -19,7 +20,7 @@ const LUFS_MAX = 0;
 const Y_LABELS = [0, -18, -30, -60];
 
 function lufsToY(lufs: number): number {
-  const clamped = Math.max(LUFS_MIN, Math.min(LUFS_MAX, lufs));
+  const clamped = clamp(lufs, LUFS_MIN, LUFS_MAX);
   return PAD_TOP + PLOT_HEIGHT - ((clamped - LUFS_MIN) / (LUFS_MAX - LUFS_MIN)) * PLOT_HEIGHT;
 }
 
