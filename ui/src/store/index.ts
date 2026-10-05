@@ -2,6 +2,10 @@ import { create } from 'zustand';
 import type { UpdateStatePayload } from '../bridge';
 
 export type TabId = 'grid' | 'tuner' | 'midi' | 'settings';
+export const TAB_IDS: readonly TabId[] = ['grid', 'tuner', 'midi', 'settings'];
+export function isTabId(value: unknown): value is TabId {
+  return typeof value === 'string' && (TAB_IDS as readonly string[]).includes(value);
+}
 export type BadgeReason = 'update' | 'error' | 'midi-conflict';
 export type BadgeSeverity = 'info' | 'warn' | 'danger';
 export interface Badge {
@@ -132,7 +136,7 @@ interface StellarrState {
   loadingStatus: string;
   loadingProgress: number;
   connected: boolean;
-  activeTab: string;
+  activeTab: TabId;
   blocks: GridBlock[];
   connections: Connection[];
   grid: GridSettings;
@@ -178,7 +182,7 @@ interface StellarrState {
   setLoading: (loading: boolean) => void;
   setLoadingStatus: (status: string, progress: number) => void;
   setConnected: (value: boolean) => void;
-  setActiveTab: (tab: string) => void;
+  setActiveTab: (tab: TabId) => void;
 
   // Tuner
   tunerNote: string | null;

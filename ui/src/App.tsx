@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useStore } from './store';
+import { useStore, isTabId } from './store';
 import { useSyncTheme } from './hooks/useSyncTheme';
 import { useSyncUpdateBadge } from './hooks/useSyncUpdateBadge';
 import { Grid } from './components/grid/Grid';
@@ -76,6 +76,11 @@ function App() {
   if (loading) return <LoadingScreen />;
 
   const handleTabChange = (tab: string) => {
+    // Tablist is generic (also drives non-tab-id switches elsewhere), so its
+    // onChange still hands back a bare string. The tabs rendered below are
+    // always one of the known TabId literals, but guard anyway so a typo'd
+    // id fails closed instead of defeating the TabId union at the store.
+    if (!isTabId(tab)) return;
     setActiveTab(tab);
     requestSetTunerEnabled(tab === 'tuner');
   };

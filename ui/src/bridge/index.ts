@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/browser';
-import { useStore } from '../store';
+import { useStore, isTabId } from '../store';
 import type {
   GridBlock,
   Connection,
@@ -65,6 +65,14 @@ function extractMessage(detail: unknown): string {
 function asRecord(detail: unknown): Record<string, unknown> {
   if (typeof detail === 'object' && detail !== null) return detail as Record<string, unknown>;
   return {};
+}
+
+// Coerces a raw JSON value to a finite number, returning null for
+// missing/non-numeric input instead of NaN (Number(undefined) and
+// Number('abc') are both NaN, which silently corrupts coordinate state).
+function toFiniteNumber(value: unknown): number | null {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
 }
 
 // -- Graph commands (UI → C++) -----------------------------------------------
@@ -413,7 +421,18 @@ function onEngineEvent(
   name: OutboundEventName,
   handler: (detail: unknown) => void,
 ): void {
-  juce.backend.addEventListener(name, handler);
+  juce.backend.addEventListener(name, (detail: unknown) => {
+    try {
+      handler(detail);
+    } catch (err) {
+      console.error(`[Bridge] Handler for "${name}" threw:`, err);
+      try {
+        if (Sentry.getClient()) Sentry.captureException(err);
+      } catch (reportErr) {
+        console.error('[Bridge] Sentry capture failed:', reportErr);
+      }
+    }
+  });
 }
 
 export function initBridge(): void {
@@ -446,14 +465,22 @@ export function initBridge(): void {
     // Apply theme before navigation so first paint is in the correct mode.
     const theme = d.theme;
     if (theme === 'light' || theme === 'dark' || theme === 'system') {
-      import('../store/theme').then(({ useThemeStore }) => {
-        useThemeStore.getState().setTheme(theme);
-      });
+      import('../store/theme')
+        .then(({ useThemeStore }) => {
+          useThemeStore.getState().setTheme(theme);
+        })
+        .catch((err) => {
+          console.error('[Bridge] screenshotSetup: failed to load theme store:', err);
+        });
     }
 
     // Navigate to page
     const page = String(d.page || 'grid');
-    useStore.getState().setActiveTab(page);
+    if (isTabId(page)) {
+      useStore.getState().setActiveTab(page);
+    } else {
+      console.warn(`[Bridge] screenshotSetup: unknown tab id "${page}" — ignoring`);
+    }
 
     // Delay actions to allow graph state to arrive and render
     setTimeout(() => {
@@ -556,13 +583,22 @@ export function initBridge(): void {
     const d = asRecord(detail);
     console.log('[Bridge] RX blockAdded:', d);
     const blockId = String(d.id);
+    const col = toFiniteNumber(d.col);
+    const row = toFiniteNumber(d.row);
+    const nodeId = toFiniteNumber(d.nodeId);
+    if (col === null || row === null || nodeId === null) {
+      console.warn(
+        `[Bridge] blockAdded: malformed numeric field for block "${blockId}" (col=${d.col}, row=${d.row}, nodeId=${d.nodeId}) — skipping`,
+      );
+      return;
+    }
     useStore.getState().addBlock({
       id: blockId,
       type: String(d.type),
       name: String(d.name),
-      col: Number(d.col),
-      row: Number(d.row),
-      nodeId: Number(d.nodeId),
+      col,
+      row,
+      nodeId,
     });
     useStore.getState().selectBlock(blockId);
   });
@@ -576,7 +612,15 @@ export function initBridge(): void {
   onEngineEvent(juce, EventNames.BlockMoved, (detail: unknown) => {
     const d = asRecord(detail);
     console.log('[Bridge] RX blockMoved:', d);
-    useStore.getState().moveBlock(String(d.blockId), Number(d.col), Number(d.row));
+    const col = toFiniteNumber(d.col);
+    const row = toFiniteNumber(d.row);
+    if (col === null || row === null) {
+      console.warn(
+        `[Bridge] blockMoved: malformed numeric field for block "${String(d.blockId)}" (col=${d.col}, row=${d.row}) — skipping`,
+      );
+      return;
+    }
+    useStore.getState().moveBlock(String(d.blockId), col, row);
   });
 
   onEngineEvent(juce, EventNames.ConnectionAdded, (detail: unknown) => {
@@ -621,33 +665,45 @@ export function initBridge(): void {
   onEngineEvent(juce, EventNames.GraphState, (detail: unknown) => {
     const d = asRecord(detail);
     console.log('[Bridge] RX graphState');
-    const blocks = (Array.isArray(d.blocks) ? d.blocks : []).map((b: unknown) => {
-      const r = asRecord(b);
-      return {
-        id: String(r.id),
-        type: String(r.type),
-        name: String(r.name),
-        col: Number(r.col),
-        row: Number(r.row),
-        nodeId: Number(r.nodeId),
-        displayName: r.displayName ? String(r.displayName) : undefined,
-        blockColor: r.blockColor ? String(r.blockColor) : undefined,
-        pluginId: r.pluginId ? String(r.pluginId) : undefined,
-        pluginName: r.pluginName ? String(r.pluginName) : undefined,
-        pluginFormat: r.pluginFormat ? String(r.pluginFormat) : undefined,
-        pluginMissing: r.pluginMissing ? Boolean(r.pluginMissing) : undefined,
-        mix: r.mix !== undefined ? Number(r.mix) : undefined,
-        balance: r.balance !== undefined ? Number(r.balance) : undefined,
-        level: r.level !== undefined ? Number(r.level) : undefined,
-        bypassed: r.bypassed ? Boolean(r.bypassed) : undefined,
-        bypassMode: r.bypassMode ? String(r.bypassMode) : undefined,
-        numStates: r.numStates !== undefined ? Number(r.numStates) : undefined,
-        activeStateIndex: r.activeStateIndex !== undefined ? Number(r.activeStateIndex) : undefined,
-        dirtyStates: Array.isArray(r.dirtyStates)
-          ? (r.dirtyStates as unknown[]).map(Number)
-          : undefined,
-      } satisfies GridBlock;
-    });
+    const blocks = (Array.isArray(d.blocks) ? d.blocks : [])
+      .map((b: unknown): GridBlock | null => {
+        const r = asRecord(b);
+        const col = toFiniteNumber(r.col);
+        const row = toFiniteNumber(r.row);
+        const nodeId = toFiniteNumber(r.nodeId);
+        if (col === null || row === null || nodeId === null) {
+          console.warn(
+            `[Bridge] graphState: malformed numeric field for block "${String(r.id)}" (col=${r.col}, row=${r.row}, nodeId=${r.nodeId}) — skipping block`,
+          );
+          return null;
+        }
+        return {
+          id: String(r.id),
+          type: String(r.type),
+          name: String(r.name),
+          col,
+          row,
+          nodeId,
+          displayName: r.displayName ? String(r.displayName) : undefined,
+          blockColor: r.blockColor ? String(r.blockColor) : undefined,
+          pluginId: r.pluginId ? String(r.pluginId) : undefined,
+          pluginName: r.pluginName ? String(r.pluginName) : undefined,
+          pluginFormat: r.pluginFormat ? String(r.pluginFormat) : undefined,
+          pluginMissing: r.pluginMissing ? Boolean(r.pluginMissing) : undefined,
+          mix: r.mix !== undefined ? Number(r.mix) : undefined,
+          balance: r.balance !== undefined ? Number(r.balance) : undefined,
+          level: r.level !== undefined ? Number(r.level) : undefined,
+          bypassed: r.bypassed ? Boolean(r.bypassed) : undefined,
+          bypassMode: r.bypassMode ? String(r.bypassMode) : undefined,
+          numStates: r.numStates !== undefined ? Number(r.numStates) : undefined,
+          activeStateIndex:
+            r.activeStateIndex !== undefined ? Number(r.activeStateIndex) : undefined,
+          dirtyStates: Array.isArray(r.dirtyStates)
+            ? (r.dirtyStates as unknown[]).map(Number)
+            : undefined,
+        } satisfies GridBlock;
+      })
+      .filter((b): b is GridBlock => b !== null);
     const connections = (Array.isArray(d.connections) ? d.connections : []).map((c: unknown) => {
       const r = asRecord(c);
       return {
@@ -835,15 +891,19 @@ export function initBridge(): void {
 
     const dsn = import.meta.env.VITE_SENTRY_DSN as string | undefined;
     if (enabled && dsn && !Sentry.getClient()) {
-      Sentry.init({
-        dsn,
-        release: `stellarr@${__APP_VERSION__}`,
-        environment: (import.meta.env.VITE_SENTRY_ENV as string) ?? 'development',
-      });
+      try {
+        Sentry.init({
+          dsn,
+          release: `stellarr@${__APP_VERSION__}`,
+          environment: (import.meta.env.VITE_SENTRY_ENV as string) ?? 'development',
+        });
 
-      // Verify the pipeline works on first opt-in
-      if (!wasEnabled) {
-        Sentry.captureMessage('Telemetry enabled', 'info');
+        // Verify the pipeline works on first opt-in
+        if (!wasEnabled) {
+          Sentry.captureMessage('Telemetry enabled', 'info');
+        }
+      } catch (err) {
+        console.error('[Bridge] Sentry init failed:', err);
       }
     }
   });
