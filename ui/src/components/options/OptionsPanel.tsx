@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useDrag } from '@use-gesture/react';
+import { useState, useEffect, useMemo } from 'react';
 import { useStore } from '../../store';
+import { useFloatingPanel } from '../../hooks/useFloatingPanel';
 import { ToggleSwitch } from '../common/ToggleSwitch';
 import { Tooltip } from '../common/Tooltip';
 import { Input } from '../common/Input';
@@ -27,8 +27,6 @@ import {
 } from '../../bridge';
 import styles from './OptionsPanel.module.css';
 
-const PANEL_EDGE_GUTTER = 16;
-
 export function OptionsPanel() {
   const selectedBlockId = useStore((s) => s.selectedBlockId);
   const blocks = useStore((s) => s.blocks);
@@ -39,8 +37,6 @@ export function OptionsPanel() {
   const devModeEnabled = useStore((s) => s.developerModeEnabled);
 
   const block = selectedBlockId ? blocks.find((b) => b.id === selectedBlockId) : null;
-
-  const panelRef = useRef<HTMLDivElement | null>(null);
 
   // Esc-to-close while a block is selected
   useEffect(() => {
@@ -55,89 +51,18 @@ export function OptionsPanel() {
     return () => window.removeEventListener('keydown', onKey);
   }, [block, selectBlock]);
 
-  // Clamp stored position so the panel can never sit outside the
-  // visible parent (e.g. when the saved position came from a larger
-  // window or a different layout). Reserves PANEL_EDGE_GUTTER on every
-  // side. Runs on open AND on subsequent window resizes — without the
-  // on-open clamp, a smaller WebView between sessions could leave the
-  // panel completely offscreen with no titlebar to drag it back.
-  const clampStoredPos = useCallback(() => {
-    if (!storedPos) return;
-    const parent = panelRef.current?.parentElement;
-    const panelEl = panelRef.current;
-    if (!parent || !panelEl) return;
-    const maxX = parent.clientWidth - panelEl.offsetWidth - PANEL_EDGE_GUTTER;
-    const maxY = parent.clientHeight - panelEl.offsetHeight - PANEL_EDGE_GUTTER;
-    const nx = Math.max(PANEL_EDGE_GUTTER, Math.min(storedPos.x, Math.max(PANEL_EDGE_GUTTER, maxX)));
-    const ny = Math.max(PANEL_EDGE_GUTTER, Math.min(storedPos.y, Math.max(PANEL_EDGE_GUTTER, maxY)));
-    if (nx !== storedPos.x || ny !== storedPos.y) {
-      setFloatingPanelPos({ x: nx, y: ny });
-    }
-  }, [storedPos, setFloatingPanelPos]);
-
-  useEffect(() => {
-    if (!block || !storedPos) return undefined;
-    // RAF to ensure the panel has rendered + measured itself before we
-    // read offsetWidth / offsetHeight on first open.
-    const id = requestAnimationFrame(clampStoredPos);
-    window.addEventListener('resize', clampStoredPos);
-    return () => {
-      cancelAnimationFrame(id);
-      window.removeEventListener('resize', clampStoredPos);
-    };
-  }, [block, storedPos, clampStoredPos]);
-
-  const getBounds = useCallback(() => {
-    const parent = panelRef.current?.parentElement;
-    const panelEl = panelRef.current;
-    if (!parent || !panelEl) return { left: 0, top: 0, right: 0, bottom: 0 };
-    return {
-      left: PANEL_EDGE_GUTTER,
-      top: PANEL_EDGE_GUTTER,
-      right: Math.max(
-        PANEL_EDGE_GUTTER,
-        parent.clientWidth - panelEl.offsetWidth - PANEL_EDGE_GUTTER,
-      ),
-      bottom: Math.max(
-        PANEL_EDGE_GUTTER,
-        parent.clientHeight - panelEl.offsetHeight - PANEL_EDGE_GUTTER,
-      ),
-    };
-  }, []);
-
-  const bindDrag = useDrag(
-    ({ offset: [x, y] }) => {
-      setFloatingPanelPos({ x, y });
-    },
-    {
-      from: () => {
-        const pos = useStore.getState().floatingPanelPos;
-        if (pos) return [pos.x, pos.y];
-        // Default top-right offset
-        const parent = panelRef.current?.parentElement;
-        const panelEl = panelRef.current;
-        if (!parent || !panelEl) return [0, 0];
-        return [
-          Math.max(0, parent.clientWidth - panelEl.offsetWidth - PANEL_EDGE_GUTTER),
-          PANEL_EDGE_GUTTER,
-        ];
-      },
-      bounds: getBounds,
-      filterTaps: true,
-      // Don't grab pointer capture — otherwise clicks on child buttons
-      // (close, ⋯, bypass toggle) route to the titlebar instead of the target.
-      pointer: { capture: false },
-    },
-  );
+  const {
+    panelRef,
+    bindDrag,
+    style: inlineStyle,
+  } = useFloatingPanel({
+    pos: storedPos,
+    setPos: setFloatingPanelPos,
+    active: !!block,
+    defaultCorner: 'top-right',
+  });
 
   if (!block) return null;
-
-  // Resolve position: stored, else default top-right once the panel is mounted.
-  // We render the panel with a placeholder offset first; a layout effect then
-  // snaps it into the correct default corner if no stored position exists.
-  const inlineStyle: React.CSSProperties = storedPos
-    ? { left: `${storedPos.x}px`, top: `${storedPos.y}px` }
-    : { right: `${PANEL_EDGE_GUTTER}px`, top: `${PANEL_EDGE_GUTTER}px` };
 
   return (
     <div ref={panelRef} data-floating-panel className={styles.panel} style={inlineStyle}>
