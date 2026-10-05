@@ -1,5 +1,5 @@
-import { Dialog } from 'radix-ui';
 import { Button } from '../common/Button';
+import { DialogShell } from '../common/DialogShell';
 import styles from './ConfirmDialog.module.css';
 
 interface Props {
@@ -20,22 +20,16 @@ export function ConfirmDialog({
   onConfirm,
 }: Props) {
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay className={styles.overlay} />
-        <Dialog.Content className={styles.content}>
-          <Dialog.Title className={styles.title}>{title}</Dialog.Title>
-          <p className={styles.message}>{message}</p>
-          <div className={styles.buttonRow}>
-            <Button variant="secondary" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button variant="danger" onClick={onConfirm}>
-              {confirmLabel}
-            </Button>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+    <DialogShell open={open} onOpenChange={onOpenChange} title={title} variant="plain">
+      <p className={styles.message}>{message}</p>
+      <div className={styles.buttonRow}>
+        <Button variant="secondary" onClick={() => onOpenChange(false)}>
+          Cancel
+        </Button>
+        <Button variant="danger" onClick={onConfirm}>
+          {confirmLabel}
+        </Button>
+      </div>
+    </DialogShell>
   );
 }

@@ -17,9 +17,8 @@ import {
   requestRenameScene,
   requestDeleteScene,
 } from '../../bridge';
-import { ensureSafeBasename } from '../../utils/filename';
-import { RenameDialog } from './RenameDialog';
-import { ConfirmDialog } from './ConfirmDialog';
+import { useRenameDeleteDialogs } from './useRenameDeleteDialogs';
+import { RenameDeleteDialogs } from './RenameDeleteDialogs';
 import { MidiAssignDialog } from '../common/MidiAssignDialog';
 import { formatMidiLabel } from '../common/constants';
 import styles from './PresetBrowser.module.css';
@@ -239,57 +238,38 @@ function PresetDropdown({
   useEffect(() => {
     if (isLoadingPreset && menuOpen) setMenuOpen(false);
   }, [isLoadingPreset, menuOpen]);
-  const [renameOpen, setRenameOpen] = useState(false);
-  const [renamingIndex, setRenamingIndex] = useState(0);
-  const [renameValue, setRenameValue] = useState('');
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deletingIndex, setDeletingIndex] = useState(0);
-
-  const startRename = (i: number) => {
-    setRenamingIndex(i);
-    setRenameValue(presetFiles[i].replace('.stellarr', ''));
-    setRenameOpen(true);
-  };
-
-  const submitRename = () => {
-    const trimmed = renameValue.trim();
-    if (trimmed) {
-      requestRenamePreset(renamingIndex, ensureSafeBasename(trimmed));
-    }
-    setRenameOpen(false);
-  };
-
-  const startDelete = (i: number) => {
-    setDeletingIndex(i);
-    setDeleteOpen(true);
-  };
-
-  const confirmDelete = () => {
-    requestDeletePreset(deletingIndex);
-    setDeleteOpen(false);
-  };
-
-  const deleteName =
-    deletingIndex >= 0 && deletingIndex < presetFiles.length
-      ? presetFiles[deletingIndex].replace('.stellarr', '')
-      : '';
+  const {
+    renameOpen,
+    setRenameOpen,
+    renameValue,
+    setRenameValue,
+    startRename,
+    submitRename,
+    deleteOpen,
+    setDeleteOpen,
+    startDelete,
+    confirmDelete,
+    deleteName,
+  } = useRenameDeleteDialogs({
+    getName: (i) =>
+      i >= 0 && i < presetFiles.length ? presetFiles[i].replace('.stellarr', '') : '',
+    onRename: requestRenamePreset,
+    onDelete: requestDeletePreset,
+  });
 
   return (
     <>
-      <RenameDialog
-        open={renameOpen}
-        onOpenChange={setRenameOpen}
-        title="Rename Preset"
-        value={renameValue}
-        onChange={setRenameValue}
-        onSubmit={submitRename}
-      />
-      <ConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        title="Delete Preset"
-        message={`Are you sure you want to delete "${deleteName}"? This cannot be undone.`}
-        onConfirm={confirmDelete}
+      <RenameDeleteDialogs
+        noun="Preset"
+        renameOpen={renameOpen}
+        onRenameOpenChange={setRenameOpen}
+        renameValue={renameValue}
+        onRenameValueChange={setRenameValue}
+        onRenameSubmit={submitRename}
+        deleteOpen={deleteOpen}
+        onDeleteOpenChange={setDeleteOpen}
+        deleteName={deleteName}
+        onDeleteConfirm={confirmDelete}
       />
       <DropdownMenu.Root
         open={menuOpen}
@@ -402,55 +382,37 @@ function SceneDropdown({
     activeSceneIndex >= 0 && activeSceneIndex < scenes.length
       ? scenes[activeSceneIndex]
       : null;
-  const [renameOpen, setRenameOpen] = useState(false);
-  const [renamingIndex, setRenamingIndex] = useState(0);
-  const [renameValue, setRenameValue] = useState('');
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deletingIndex, setDeletingIndex] = useState(0);
-
-  const startRename = (i: number) => {
-    setRenamingIndex(i);
-    setRenameValue(scenes[i].name);
-    setRenameOpen(true);
-  };
-
-  const submitRename = () => {
-    const trimmed = renameValue.trim();
-    if (trimmed) {
-      requestRenameScene(renamingIndex, ensureSafeBasename(trimmed));
-    }
-    setRenameOpen(false);
-  };
-
-  const startDelete = (i: number) => {
-    setDeletingIndex(i);
-    setDeleteOpen(true);
-  };
-
-  const confirmDelete = () => {
-    requestDeleteScene(deletingIndex);
-    setDeleteOpen(false);
-  };
-
-  const deleteName =
-    deletingIndex >= 0 && deletingIndex < scenes.length ? scenes[deletingIndex].name : '';
+  const {
+    renameOpen,
+    setRenameOpen,
+    renameValue,
+    setRenameValue,
+    startRename,
+    submitRename,
+    deleteOpen,
+    setDeleteOpen,
+    startDelete,
+    confirmDelete,
+    deleteName,
+  } = useRenameDeleteDialogs({
+    getName: (i) => (i >= 0 && i < scenes.length ? scenes[i].name : ''),
+    onRename: requestRenameScene,
+    onDelete: requestDeleteScene,
+  });
 
   return (
     <>
-      <RenameDialog
-        open={renameOpen}
-        onOpenChange={setRenameOpen}
-        title="Rename Scene"
-        value={renameValue}
-        onChange={setRenameValue}
-        onSubmit={submitRename}
-      />
-      <ConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        title="Delete Scene"
-        message={`Are you sure you want to delete "${deleteName}"? This cannot be undone.`}
-        onConfirm={confirmDelete}
+      <RenameDeleteDialogs
+        noun="Scene"
+        renameOpen={renameOpen}
+        onRenameOpenChange={setRenameOpen}
+        renameValue={renameValue}
+        onRenameValueChange={setRenameValue}
+        onRenameSubmit={submitRename}
+        deleteOpen={deleteOpen}
+        onDeleteOpenChange={setDeleteOpen}
+        deleteName={deleteName}
+        onDeleteConfirm={confirmDelete}
       />
       <DropdownMenu.Root>
         <DropdownMenu.Trigger className={styles.dropdownTrigger}>
