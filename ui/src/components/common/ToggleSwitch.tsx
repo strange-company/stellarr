@@ -13,7 +13,14 @@ export function ToggleSwitch({ enabled, onToggle, title, sharp }: Props) {
     .filter(Boolean)
     .join(' ');
   return (
-    <button onClick={onToggle} title={title} className={cls}>
+    <button
+      onClick={onToggle}
+      title={title}
+      aria-label={title}
+      role="switch"
+      aria-checked={enabled}
+      className={cls}
+    >
       <div className={styles.thumb} />
     </button>
   );

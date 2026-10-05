@@ -83,11 +83,29 @@
   pointer-events: none;
 }
 
+/* .iconSlot is a real <button> here. Reset UA button chrome (background,
+   border, padding, font) so it renders identically to the plain div it
+   replaced — only `cursor`/`color` are meant to carry over. Hidden via
+   opacity + pointer-events (not `display: none`) rather than display so a
+   keyboard-focused button can still reveal itself — `display: none`
+   elements can never receive focus, which would make these controls
+   permanently unreachable from the keyboard. */
+.copyButton,
+.removeButton {
+  appearance: none;
+  background: none;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .copyButton {
   left: 4px;
   color: var(--color-muted);
   cursor: pointer;
-  display: none;
 }
 
 .copyButton:hover {
@@ -98,12 +116,23 @@
   right: 4px;
   color: var(--color-danger);
   cursor: pointer;
-  display: none;
 }
 
 .block:hover .copyButton,
-.block:hover .removeButton {
-  display: flex;
+.block:hover .removeButton,
+.copyButton:focus-visible,
+.removeButton:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Focus recolours the glyph to orchid (design-system focus convention —
+   recolour, never a blue ring) since these controls carry no border to
+   restyle. */
+.copyButton:focus-visible,
+.removeButton:focus-visible {
+  outline: none;
+  color: var(--color-primary);
 }
 
 /* Edge zones — invisible hit areas along left/right block edges */

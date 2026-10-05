@@ -182,8 +182,10 @@ export function GridBlockComponent({ block, onEdgeContextMenu }: Props) {
         />
       )}
 
-      {/* Copy button — visible on block hover via CSS */}
-      <div
+      {/* Copy button — visible on block hover (or its own keyboard focus) via CSS */}
+      <button
+        type="button"
+        aria-label="Copy block"
         className={`${styles.iconSlot} ${styles.copyButton}`}
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => {
@@ -193,10 +195,12 @@ export function GridBlockComponent({ block, onEdgeContextMenu }: Props) {
         }}
       >
         <TbCopy size={14} />
-      </div>
+      </button>
 
-      {/* Remove button — visible on block hover via CSS */}
-      <div
+      {/* Remove button — visible on block hover (or its own keyboard focus) via CSS */}
+      <button
+        type="button"
+        aria-label="Remove block"
         className={`${styles.iconSlot} ${styles.removeButton}`}
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => {
@@ -205,7 +209,7 @@ export function GridBlockComponent({ block, onEdgeContextMenu }: Props) {
         }}
       >
         <IoCloseSharp size={Math.max(14, Math.round(16 * layout.blockScale))} />
-      </div>
+      </button>
     </div>
   );
 }
