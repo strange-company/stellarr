@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { useStore } from '../../../store';
+import { useUiPrefsStore } from '../../../store/uiPrefs';
 import type { GridBlock } from '../../../store';
 import { GridBlockComponent } from '../GridBlock';
 import { requestCopyBlock, requestRemoveBlock } from '../../../bridge';
@@ -29,9 +30,9 @@ function resetStore() {
       connections: [],
       selectedBlockId: null,
       draggingConnection: null,
-      cellZoom: 'M',
       selectBlock: vi.fn(),
     });
+    useUiPrefsStore.setState({ cellZoom: 'M' });
   });
 }
 
