@@ -1,4 +1,4 @@
-.PHONY: setup dev dev-ui dev-cpp debug debug-cpp release release-cpp run run-debug run-release run-ui open test test-ui docs web clean clear-cache purge-user-state screenshots regen-sparkle-keys-prod regen-sparkle-keys-dev dev-updater-serve
+.PHONY: setup check dev dev-ui dev-cpp debug debug-cpp release release-cpp run run-debug run-release run-ui open test test-ui docs web clean clear-cache purge-user-state screenshots regen-sparkle-keys-prod regen-sparkle-keys-dev dev-updater-serve
 
 .DEFAULT_GOAL := dev
 
@@ -12,7 +12,20 @@ STELLARR_FLAVOUR ?= prod
 FLAVOUR_CMAKE_FLAG := -DSTELLARR_FLAVOUR=$(STELLARR_FLAVOUR)
 
 setup:
+	git config core.hooksPath .githooks
 	cd ui && npm install
+
+# Repository policy checks (commit messages, protected branch, design-system
+# hex rule) plus self-tests for every checker and Claude Code hook. CI runs
+# this on ubuntu-latest; CHECK_RANGE is the PR's own commits.
+CHECK_RANGE ?= origin/main..HEAD
+check:
+	node scripts/checks/commit-msg.mjs --self-test
+	bash scripts/checks/no-commit-on-main.sh --self-test
+	node scripts/checks/no-raw-hex.mjs --self-test
+	bash .claude/hooks/test-hooks.sh
+	node scripts/checks/no-raw-hex.mjs
+	node scripts/checks/commit-msg.mjs --range $(CHECK_RANGE)
 
 clear-cache:
 	rm -rf ~/Library/Caches/com.stellarr.stellarr ~/Library/WebKit/com.stellarr.stellarr

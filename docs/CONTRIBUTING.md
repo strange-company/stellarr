@@ -94,6 +94,10 @@ or `make dev-ui` to verify the UI compiles cleanly.
 
 The build produces a **standalone macOS application** at `build/Stellarr_artefacts/Debug/Standalone/Stellarr.app` (or `Release` for release builds).
 
+## Repository Checks
+
+`make setup` enables the project git hooks (`git config core.hooksPath .githooks`): commit messages are checked against the policy below, and commits on `main` are refused. `make check` runs the same checks over your branch, plus the design-system rule against raw hex colours in CSS modules; CI runs it on every pull request. The checks live in `scripts/checks/` and each has a `--self-test`.
+
 ## Branches and Merging
 
 Never commit directly to `main`; it is protected. Branch from an up-to-date `main`, one branch per change:

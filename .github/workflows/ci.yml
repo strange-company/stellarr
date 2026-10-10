@@ -12,9 +12,18 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+# A new push to a PR cancels that PR's in-flight run instead of queueing
+# behind it on the single self-hosted runner.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  # Cheap jobs run on GitHub-hosted runners so docs/config PRs are not
+  # blocked when the self-hosted Mac runner is offline.
   changes:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       code: ${{ steps.filter.outputs.code }}
     steps:
@@ -29,10 +38,26 @@ jobs:
               - 'CMakeLists.txt'
               - '.github/workflows/ci.yml'
 
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Policy checks (make check)
+        run: make check CHECK_RANGE=origin/${{ github.base_ref || 'main' }}..HEAD
+
   run-build:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: self-hosted
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
         with:
@@ -61,15 +86,18 @@ jobs:
         run: ctest --test-dir build --output-on-failure
 
   # Gate job — satisfies the required "build-and-test" status check.
-  # Passes when the build succeeds OR when path filters skip it.
+  # Passes when policy checks pass and the build succeeds or is skipped by
+  # the path filter.
   build-and-test:
     if: always()
-    needs: [changes, run-build]
-    runs-on: self-hosted
+    needs: [changes, checks, run-build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - run: |
-          if [ "${{ needs.run-build.result }}" = "failure" ]; then
-            echo "Build failed"
-            exit 1
-          fi
+          for result in "${{ needs.changes.result }}" "${{ needs.checks.result }}" "${{ needs.run-build.result }}"; do
+            case "$result" in
+              failure|cancelled) echo "A required job did not pass ($result)"; exit 1 ;;
+            esac
+          done
           echo "OK"
