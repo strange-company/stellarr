@@ -9,10 +9,19 @@ web/.astro/
 .env.*
 !.env.example
 .cache/
-.claude/
+.claude/*
+!.claude/settings.json
+!.claude/rules/
+!.claude/skills/
+!.claude/agents/
+!.claude/hooks/
+.claude/skills/react-best-practices/
 .DS_Store
 .superpowers/
 screenshots.json
 *.user
 .vscode/
 !.vscode/c_cpp_properties.json
+
+# Personal, per-developer agent instructions
+CLAUDE.local.md
