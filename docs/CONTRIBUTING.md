@@ -11,7 +11,7 @@ Stellarr currently targets **macOS on Apple Silicon** only.
 - macOS on Apple Silicon (M1 or later)
 - CMake 3.24+
 - Xcode Command Line Tools
-- Node.js 18+
+- Node.js 22.12+ (CI uses Node 24)
 - npm
 
 ## Project Structure
@@ -19,7 +19,7 @@ Stellarr currently targets **macOS on Apple Silicon** only.
 ```
 engine/          C++ audio engine, plugin host, and WebView bridge
 engine/blocks/   Block implementations (Input, Output, Plugin)
-engine/bridge/   Bridge event handlers (graph, params, scenes, MIDI, presets)
+engine/bridge/   Bridge event handlers (graph, params, scenes, MIDI, presets, input block, updates)
 engine/test/     Audio processing and integration tests
 ui/              React + TypeScript frontend (Vite, Zustand, Radix UI, CSS Modules)
 ui/src/bridge/   JS-side bridge (sendEvent / addEventListener)
@@ -78,7 +78,7 @@ In debug builds, right-click anywhere in the app window and select "Inspect Elem
 make test
 ```
 
-This builds with `BUILD_TESTING=ON` and runs all test suites via CTest. Always run tests before submitting a pull request.
+This runs the UI tests (Vitest), then builds with `BUILD_TESTING=ON` and runs the engine test suites via CTest. Always run tests before submitting a pull request.
 
 ### TypeScript checks
 
@@ -88,11 +88,25 @@ The `make` targets build the UI with Vite, but that does not catch all TypeScrip
 cd ui && npx tsc --noEmit
 ```
 
-or `make build-ui` to verify the UI compiles cleanly.
+or `make dev-ui` to verify the UI compiles cleanly.
 
 ## Build Outputs
 
 The build produces a **standalone macOS application** at `build/Stellarr_artefacts/Debug/Standalone/Stellarr.app` (or `Release` for release builds).
+
+## Branches and Merging
+
+Never commit directly to `main`; it is protected. Branch from an up-to-date `main`, one branch per change:
+
+| Type | Pattern | Example |
+|---|---|---|
+| Feature | `feature/<short-name>` | `feature/undo-redo` |
+| Bug fix | `fix/<short-name>` | `fix/scan-freeze` |
+| Hotfix | `hotfix/<short-name>` | `hotfix/crash-on-load` |
+| Documentation | `doc/<short-name>` | `doc/update-midi-manual` |
+| Chore | `chore/<short-name>` | `chore/bump-actions` |
+
+Pull requests are squash-merged by default, so each PR lands as a single commit on `main`. Branches are deleted after merge.
 
 ## Commit Messages
 
@@ -121,6 +135,10 @@ Use `feat!:` or a `BREAKING CHANGE:` footer for breaking changes. Keep the first
 - Run `make test` and `npx tsc --noEmit` before submitting
 - Update the relevant [user manual](manual/) page if your change affects user-facing behaviour
 - Match existing code style and conventions (no linter config yet -- follow the patterns you see)
+
+## Working with AI Agents
+
+AI coding agents are welcome. Their rules live in [`AGENTS.md`](../AGENTS.md) (read by Claude Code, Codex, Cursor and others), with path-specific detail in `.claude/rules/`. The same gates apply to agent-assisted changes as to hand-written ones: verify the change in the running app, keep the PR focused, and do not include AI attribution trailers in commits or PR descriptions.
 
 ## Licence
 
