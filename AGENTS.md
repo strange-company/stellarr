@@ -28,6 +28,7 @@ Build and verify:
 - `make run` / `make run-debug` / `make run-release` build and launch; `make run-ui` rebuilds only the UI and relaunches the existing engine binary.
 - `make dev-ui` or `cd ui && npx tsc --noEmit` catches TypeScript errors; plain `make` does not.
 - `cd web && npm ci && npm run build` verifies the website; PR CI does not build `web/`.
+- `make check` runs the repository policy checks (commit messages, protected branch, raw hex in CSS modules) and their self-tests; CI runs it on every PR. `make setup` enables the matching git hooks (`core.hooksPath .githooks`).
 
 ## Principles
 
@@ -85,7 +86,7 @@ Standing lenses: language best practices (C++20, TypeScript); DRY across call si
 
 Hot spots, where the bar is higher: the real-time audio path; the message/audio thread boundary (`StellarrBridge.cpp`, `engine/bridge/`, plugin loading in `PluginManager.cpp`); the UI-C++ bridge contract; the design-system surface (`tokens.css`, `variables.css`, `components/common/`), where changes ripple to every screen: check for token drift, orchid/amber role inversion, and removal of tokens still referenced elsewhere.
 
-Do not flag: TypeScript errors (`tsc --noEmit` catches them; do flag a diff that suppresses one with `@ts-ignore` or similar); editor-handled whitespace; rewrites of working imperative code; speculative future-proofing. If nothing reaches P1/P2, an automated reviewer leaves a thumbs-up reaction and stops; do not manufacture P3s.
+Do not flag: commit message format (`make check` enforces it); TypeScript errors (`tsc --noEmit` catches them; do flag a diff that suppresses one with `@ts-ignore` or similar); editor-handled whitespace; rewrites of working imperative code; speculative future-proofing. If nothing reaches P1/P2, an automated reviewer leaves a thumbs-up reaction and stops; do not manufacture P3s.
 
 ## Where a rule goes
 
@@ -95,7 +96,7 @@ Do not flag: TypeScript errors (`tsc --noEmit` catches them; do flag a diff that
 | Binds every agent | `AGENTS.md` |
 | Applies to certain paths only | `.claude/rules/*.md` with `paths:` frontmatter |
 | A procedure of more than about three steps | a skill in `.claude/skills/` |
-| Must hold every time, without exception | a hook, git hook, or CI check |
+| Must hold every time, without exception | a check in `scripts/checks/` wired into `make check`, a git hook, or a Claude Code hook |
 | One person's preference | their own memory or `CLAUDE.local.md` |
 
 When a rule is added or changed, record the date and the reason next to it, so later readers can tell a deliberate decision from an accident. (Adopted 2026-10-06 with the harness restructure; rules that predate it are unannotated.)

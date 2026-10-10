@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Enabled by `make setup` (git config core.hooksPath .githooks).
+exec node "$(git rev-parse --show-toplevel)/scripts/checks/commit-msg.mjs" "$1"

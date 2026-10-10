@@ -23,7 +23,8 @@
       "Bash(git branch --show-current)",
       "Bash(gh pr view*)",
       "Bash(gh pr checks*)",
-      "Bash(gh pr list*)"
+      "Bash(gh pr list*)",
+      "Bash(make check)"
     ],
     "deny": [
       "Bash(git push --force*)",
@@ -39,7 +40,56 @@
   },
   "sandbox": {
     "network": {
-      "allowedDomains": ["registry.npmjs.org"]
+      "allowedDomains": [
+        "registry.npmjs.org"
+      ]
     }
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-context.sh\""
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git commit*)",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-main-commit.sh\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/css-hex-advisory.sh\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop-typecheck.sh\"",
+            "timeout": 120,
+            "statusMessage": "Type-checking ui/"
+          }
+        ]
+      }
+    ]
   }
 }
